@@ -1,6 +1,6 @@
 # BirdCoin Token Presale/Sale Smart Contract
 
-[![Watch the video](/Birdchain/birdchain/blob/master/video.png)](https://www.youtube.com/watch?v=Q90ECs3_Je0)
+[![Watch the video](https://raw.githubusercontent.com/Birdchain/birdchain/master/video.png)](https://www.youtube.com/watch?v=Q90ECs3_Je0)
 
 ## Development in progress
 
