@@ -2,7 +2,7 @@
 
 [![Watch the video](https://www.github.com/Birdchain/birdchain/blob/master/video.png)](https://www.youtube.com/watch?v=Q90ECs3_Je0)
 
-## Developing is in progress
+## Development in progress
 
 Smart contract that is shared  here is not yet the final version. It is still being tested, tweaked and updated.
 
@@ -15,7 +15,7 @@ Here is why Birdchain will succeed:
 
 - Normally people do not send SMS to their friends, relatives, or acquaintances. They communicate through instant messaging apps, like Facebook Messenger, Viber, WhatsApp. Even though people do not send SMSs, operators include a limitless amount of SMS messages to their mobile plan and people pay for the service they do not even need.
 - Businesses are drastically overpaying for SMS marketing and they are constantly looking for more reasonable prices. We will offer them a much cheaper, faster and more transparent service.
-- We are simplifying the process for the people by making it financially attractive to the businesses. This is how Birdchain cryptocurrency gets additional demand and supply from the very beginning. 15 
+- We are simplifying the process for the people by making it financially attractive to the businesses. This is how Birdchain cryptocurrency gets additional demand and supply from the very beginning. 
 
 ## Benefit for the People
 
@@ -32,7 +32,7 @@ We will develop a self-balancing distribution algorithm which will guarantee tha
 
 ## Benefits for Businesses
 
-Our idea will (r)evolutionize the market of SMS marketing. Today, when a company wants to reach its customers, it has to pay exorbitant price for distribution of the campaign. Moreover, every year, the prices for SMS messaging are increasing, and service quality is decreasing.16 
+Our idea will (r)evolutionize the market of SMS marketing. Today, when a company wants to reach its customers, it has to pay exorbitant price for distribution of the campaign. Moreover, every year, the prices for SMS messaging are increasing, and service quality is decreasing.
 Birdchain will allow businesses to almost instantly distribute their campaigns and enjoy much lower prices. They will contact their customers all around the world and:
 - Get a better price, no matter how big their campaigns are;
 - The price will never exceed 80 percent of an average A2P SMS price in the same country;
@@ -52,7 +52,7 @@ The best part is that companies will be able to choose how much they want to spe
 ## Price for Business
 
 Birdchain service for businesses will operate as an auction. It is the fairest solution for both: the businesses and the people. 
-Company will have to set maximum amount of Birdchain tokens it want to spend on its campaign - bid. No matter how high/low bid company will set, the campaign will be delivered either way. Higher bid will mean that campaign will be distributed faster, and lower bid - not as fast. When setting up the campaign, Birdchain service will show the expected time of finishing campaign delivery, so our clients could fully plan their campaigns and expenses. 17
+Company will have to set maximum amount of Birdchain tokens it want to spend on its campaign - bid. No matter how high/low bid company will set, the campaign will be delivered either way. Higher bid will mean that campaign will be distributed faster, and lower bid - not as fast. When setting up the campaign, Birdchain service will show the expected time of finishing campaign delivery, so our clients could fully plan their campaigns and expenses.
 
 This feature will allow avoiding “traffic jams” and ensuring all SMS messages are delivered. It will also guarantees that all companies - even small and not too rich - will be able to exercise very effective SMS marketing.
 
@@ -74,9 +74,9 @@ We see this feature as huge marketing opportunity and a chance to stand out in a
 
 ## BTC token functionality
 
-In order to further the development of the platform and get to the global market as soon as possible we are going to raise extra funding by running an ICO campaign.
+In order to further the development of the platform and get to the global market as soon as possible we are going to raise funding by running an ICO campaign.
 
-Birdchain issued   9,402,750,000  BCT tokens total, of which 43% will be put on sale. 
+Birdchain will issue 9,402,750,000  BCT tokens total, of which 43% will be put on sale. 
 The base cost of tokens will depend on the popularity of the platform, and their holders.
 Birdchain token is an A2P SMS distribution service and all owners of BCT are either users of the service, or resellers of the token.
 
@@ -84,7 +84,6 @@ Within the Birdchain ecosystem, the Birdchain token (BCT) will be used internall
 Businesses would be able to purchase BCT in exchanges, and then place bids for SMS campaigns they want to deliver, setting the bid in BCT token. The advertisers will bid for a specific number of SMS they want to send.
 
 While our system is calculating the best price/delivery time option for an advertiser, the token will be frozen. They will remain frozen until our system receives confirmation that peers have completed their tasks. When that happens, paid tokens are transferred to the wallets of app users, minus fair commission fee for Birdchain service.
- 
  
 BCT token is developed on Ethereum’s blockchain and conform to the ERC20 Token Standard.
 
