@@ -3,11 +3,9 @@ pragma solidity ^0.4.13;
 import "zeppelin-solidity/contracts/ownership/Ownable.sol";
 import "zeppelin-solidity/contracts/crowdsale/RefundVault.sol";
 import "./BirdCoin.sol";
-import '../libraries/Iterable-mapping.sol';
 
 contract BirdCoinCrowdsale is Ownable {
     using SafeMath for uint256;
-    using IterableMapping for IterableMapping.itmap;
 
     address constant FOUNDERS_WALLET = 0xEA3E63a29e40DAce4559EE4e566655Fab65FEcB9; // Wallet address where ethereum will be kept
     address constant EARLY_BIRDS_WALLET = 0xEA3E63a29e40DAce4559EE4e566655Fab65FEcB9;
@@ -26,7 +24,8 @@ contract BirdCoinCrowdsale is Ownable {
 
     BirdCoin public token;
     RefundVault public vault;
-    IterableMapping.itmap private purchasers;
+
+    mapping (address => uint256) private purchasers;
 
     bool public isFinalized = false;
     uint256 public membersCount = 0;
@@ -70,6 +69,7 @@ contract BirdCoinCrowdsale is Ownable {
         require(FOUNDERS_WALLET != 0x0);
 
         token = new BirdCoin();
+        token.lockTill(endTime);
         vault = new RefundVault(FOUNDERS_WALLET);
 
         icoBalance = TOTAL_ETH.mul(43).div(100);
@@ -104,7 +104,7 @@ contract BirdCoinCrowdsale is Ownable {
 
         uint256 tokens = calcTokens(beneficiary, weiAmount);
 
-        IterableMapping.insert(purchasers, beneficiary, msg.value);
+        purchasers[beneficiary] = msg.value;
 
         token.mint(beneficiary, tokens);
         TokenPurchase(msg.sender, beneficiary, weiAmount, tokens);
@@ -119,7 +119,7 @@ contract BirdCoinCrowdsale is Ownable {
         bool validAddress = beneficiary != 0x0;
         bool isWhitelisted = whitelist[beneficiary] > 0;
         bool isSenderBeneficiary = msg.sender == beneficiary;
-        bool hasNotPaid = !IterableMapping.contains(purchasers, beneficiary);
+        bool hasNotPaid = (purchasers[beneficiary] == 0);
         bool withinPeriod = now >= startTime && now <= endTime;
         bool withinRangePurchase = msg.value >= MIN_STAKE && msg.value <= MAX_STAKE;
         return validAddress && withinPeriod && withinRangePurchase && isWhitelisted && isSenderBeneficiary && hasNotPaid;
@@ -174,10 +174,12 @@ contract BirdCoinCrowdsale is Ownable {
             vault.enableRefunds();
         }
 
-        teamReward();
+        token.mint(this, icoBalance.add(specialBalance));
+
         bountyReward();
-        foundersReward();
         earlyBirdsReward();
+        teamReward();
+        foundersReward();
 
         Finalized();
 
@@ -190,27 +192,22 @@ contract BirdCoinCrowdsale is Ownable {
 
     /********************* Token distribution ********************/
 
-    function distribute(uint256 _lowerBound, uint256 _upperBound) onlyOwner public {
-        require(goalReached());
-        uint256 totalBalanceLeft = icoBalance + specialBalance;
+    function calcAdditionalTokens(address _purchaser) constant public returns (uint256) {
+        if (purchasers[_purchaser] > 0 && goalReached()) {
+            uint256 totalBalanceLeft = icoBalance.add(specialBalance);
+            uint256 totalSold = saleBalance.sub(totalBalanceLeft);
+            uint256 value = purchasers[_purchaser];
+            return totalBalanceLeft.mul(value).div(totalSold).mul(RATE);
+        }
 
-        if (totalBalanceLeft <= DONATION_CAP) {
-            //donation for ethrereum
-            token.mint(ETHEREUM_WALLET, totalBalanceLeft);
-            icoBalance = 0;
-            specialBalance = 0;
-            forwardFunds();
-        } else {
-            uint256 totalSold = saleBalance - totalBalanceLeft;
+        return 0;
+    }
 
-            for (uint i = _lowerBound; i <= _upperBound && IterableMapping.iterate_valid(purchasers, i); i++) {
-                var (key, value) = IterableMapping.iterate_get(purchasers, i);
-                if (!purchasers.keys[i].deleted) {
-                    uint256 additionalTokens = totalBalanceLeft.mul(value).div(totalSold).mul(RATE);
-                    token.mint(key, additionalTokens);
-                    IterableMapping.remove(purchasers, key);
-                }
-            }
+    function withdraw(address _purchaser) public {
+        uint256 additionalTokens = calcAdditionalTokens(_purchaser);
+        if (additionalTokens > 0) {
+            purchasers[_purchaser] = 0;
+            token.transferCrowdsale(_purchaser, additionalTokens);
         }
     }
 
@@ -221,7 +218,7 @@ contract BirdCoinCrowdsale is Ownable {
         forwardFunds();
     }
 
-    function bountyReward() onlyOwner public {
+    function bountyReward() onlyOwner private {
         token.mint(BOUNTY_WALLET, bountyBalance);
         bountyBalance = 0;
         forwardFunds();
