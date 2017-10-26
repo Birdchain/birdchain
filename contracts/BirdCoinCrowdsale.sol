@@ -10,15 +10,17 @@ contract BirdCoinCrowdsale is Ownable {
     address constant FOUNDERS_WALLET = 0xEA3E63a29e40DAce4559EE4e566655Fab65FEcB9; // Wallet address where ethereum will be kept
     address constant EARLY_BIRDS_WALLET = 0xEA3E63a29e40DAce4559EE4e566655Fab65FEcB9;
     address constant ETHEREUM_WALLET = 0x89205A3A3b2A69De6Dbf7f01ED13B2108B2c43e7;
-    address constant TEAM_WALLET = 0xEA3E63a29e40DAce4559EE4e566655Fab65FEcB9;
+    address constant TEAM_WALLET_1_YEAR = 0xEA3E63a29e40DAce4559EE4e566655Fab65FEcB9;
+    address constant TEAM_WALLET_2_YEAR = 0xEA3E63a29e40DAce4559EE4e566655Fab65FEcB9;
+    address constant TEAM_WALLET_3_YEAR = 0xEA3E63a29e40DAce4559EE4e566655Fab65FEcB9;
+    address constant TEAM_WALLET_4_YEAR = 0xEA3E63a29e40DAce4559EE4e566655Fab65FEcB9;
     address constant BOUNTY_WALLET = 0xEA3E63a29e40DAce4559EE4e566655Fab65FEcB9;
     uint256 constant TOTAL_LEVELS = 3;
     uint256 constant RATE = 42000;
     uint256 constant MIN_STAKE = 0.5 ether;
-    uint256 constant MAX_STAKE = 300 ether;
+    uint256 constant MAX_STAKE = 500 ether;
     uint256 constant TOTAL_ETH = 200000 ether;
     uint256 constant SOFT_CAP = 10000 ether;
-    uint256 constant DONATION_CAP = 50 ether;
     uint constant SILVER = 1 ether;
     uint constant GOLD = 5 ether;
 
@@ -156,7 +158,7 @@ contract BirdCoinCrowdsale is Ownable {
 
     /**************************** Refunds  *****************************/
 
-    function claimRefund() public {
+    function claimRefund() private {
         require(isFinalized);
         require(!goalReached());
 
@@ -169,16 +171,17 @@ contract BirdCoinCrowdsale is Ownable {
 
         if (goalReached()) {
             vault.close();
+
+            bountyReward();
+            earlyBirdsReward();
+            teamReward();
+            foundersReward();
+
+            token.mint(this, icoBalance.add(specialBalance));
         } else {
             vault.enableRefunds();
+            token.freezeForever();
         }
-
-        token.mint(this, icoBalance.add(specialBalance));
-
-        bountyReward();
-        earlyBirdsReward();
-        teamReward();
-        foundersReward();
 
         Finalized();
 
@@ -210,17 +213,20 @@ contract BirdCoinCrowdsale is Ownable {
         }
     }
 
-    function withdraw(address _purchaser) public {
-        uint256 additionalTokens = calcAdditionalTokens(_purchaser);
-        if (additionalTokens > 0) {
-            purchasers[_purchaser] = 0;
-            token.transferCrowdsale(_purchaser, additionalTokens);
-        }
-    }
-
     function teamReward() private {
-        token.lockTill(TEAM_WALLET, now + 60 * 60 * 24 * 365 * 2); // 2years
-        token.mint(TEAM_WALLET, teamBalance.mul(RATE));
+        uint256 partPerYear = teamBalance.mul(RATE).div(4);
+        uint yearInSeconds = 31536000;
+        token.lockTill(TEAM_WALLET_1_YEAR, now + yearInSeconds);
+        token.mint(TEAM_WALLET_1_YEAR, partPerYear);
+
+        token.lockTill(TEAM_WALLET_2_YEAR, now + yearInSeconds * 2);
+        token.mint(TEAM_WALLET_2_YEAR, partPerYear);
+
+        token.lockTill(TEAM_WALLET_3_YEAR, now + yearInSeconds * 3);
+        token.mint(TEAM_WALLET_3_YEAR, partPerYear);
+
+        token.lockTill(TEAM_WALLET_4_YEAR, now + yearInSeconds * 4);
+        token.mint(TEAM_WALLET_4_YEAR, partPerYear);
         teamBalance = 0;
     }
 
@@ -230,7 +236,7 @@ contract BirdCoinCrowdsale is Ownable {
     }
 
     function foundersReward() private {
-        token.lockTill(FOUNDERS_WALLET, now + 60 * 60 * 24 * 365 * 2); // 2years
+        token.lockTill(FOUNDERS_WALLET, now + 31536000 * 2); // 2years
         token.mint(FOUNDERS_WALLET, foundersBalance.mul(RATE));
         foundersBalance = 0;
     }
@@ -240,4 +246,3 @@ contract BirdCoinCrowdsale is Ownable {
         earlyBirdsBalance = 0;
     }
 }
-
