@@ -38,7 +38,7 @@ contract BirdCoinCrowdsale is Ownable {
     uint256 public specialBalance;
     uint256 saleBalance;
     uint256 private startTime = now;
-    uint256 private endTime = startTime + 3 * 24 * 60 * 60;
+    uint256 public endTime = startTime + 4 * 60;
     uint public currentStage = 0;
 
     struct Stages {
@@ -69,7 +69,6 @@ contract BirdCoinCrowdsale is Ownable {
         require(FOUNDERS_WALLET != 0x0);
 
         token = new BirdCoin();
-        token.lockTill(endTime);
         vault = new RefundVault(FOUNDERS_WALLET);
 
         icoBalance = TOTAL_ETH.mul(43).div(100);
@@ -211,29 +210,26 @@ contract BirdCoinCrowdsale is Ownable {
         }
     }
 
-    function teamReward() onlyOwner private {
-        token.lockTill(now + 60 * 60 * 24 * 365 * 2); // 2years
+    function teamReward() private {
+        token.lockTill(TEAM_WALLET, now + 60 * 60 * 24 * 365 * 2); // 2years
         token.mint(TEAM_WALLET, teamBalance);
         teamBalance = 0;
-        forwardFunds();
     }
 
-    function bountyReward() onlyOwner private {
+    function bountyReward() private {
         token.mint(BOUNTY_WALLET, bountyBalance);
         bountyBalance = 0;
-        forwardFunds();
     }
 
-    function foundersReward() onlyOwner private {
-        token.lockTill(now + 60 * 60 * 24 * 365 * 2); // 2years
+    function foundersReward() private {
+        token.lockTill(FOUNDERS_WALLET, now + 60 * 60 * 24 * 365 * 2); // 2years
         token.mint(FOUNDERS_WALLET, foundersBalance);
         foundersBalance = 0;
-        forwardFunds();
     }
 
-    function earlyBirdsReward() onlyOwner private {
+    function earlyBirdsReward() private {
         token.mint(EARLY_BIRDS_WALLET, earlyBirdsBalance);
         earlyBirdsBalance = 0;
-        forwardFunds();
     }
 }
+
