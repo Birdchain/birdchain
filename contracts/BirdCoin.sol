@@ -7,7 +7,7 @@ contract BirdCoin is MintableToken {
     string public constant name = "BirdCoin";
     string public constant symbol = "Bird";
     uint8 public constant decimals = 18;
-    uint256 private lockedTill = now + 4 * 60;
+    uint256 private lockedTill;
     mapping (address => uint256) private lockDuration;
     BirdCoinCrowdsale private crowdsale;
 
@@ -18,7 +18,7 @@ contract BirdCoin is MintableToken {
     // Checks whether it can transfer or otherwise throws.
     modifier canTransfer(address _sender, uint _value) {
         require(lockDuration[_sender] < now);
-        require(lockedTill < now);
+        require(lockedTill != 0 && crowdsale.endTime() < now);
         _;
     }
     // calls withdraw on BirdCoinCrowdsale contract
@@ -46,9 +46,11 @@ contract BirdCoin is MintableToken {
         return super.balanceOf(_owner).add(crowdsale.calcAdditionalTokens(_owner));
     }
 
-    // Set the level which will be required for transferring tokens
     function lockTill(address addr, uint256 timeTill) {
         lockDuration[addr] = timeTill;
     }
-}
 
+    function freezeForever() {
+        lockedTill = 0;
+    }
+}
