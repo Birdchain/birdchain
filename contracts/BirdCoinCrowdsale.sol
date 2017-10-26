@@ -210,25 +210,33 @@ contract BirdCoinCrowdsale is Ownable {
         }
     }
 
+    function withdraw(address _purchaser) public {
+        uint256 additionalTokens = calcAdditionalTokens(_purchaser);
+        if (additionalTokens > 0) {
+            purchasers[_purchaser] = 0;
+            token.transferCrowdsale(_purchaser, additionalTokens);
+        }
+    }
+
     function teamReward() private {
         token.lockTill(TEAM_WALLET, now + 60 * 60 * 24 * 365 * 2); // 2years
-        token.mint(TEAM_WALLET, teamBalance);
+        token.mint(TEAM_WALLET, teamBalance.mul(RATE));
         teamBalance = 0;
     }
 
     function bountyReward() private {
-        token.mint(BOUNTY_WALLET, bountyBalance);
+        token.mint(BOUNTY_WALLET, bountyBalance.mul(RATE));
         bountyBalance = 0;
     }
 
     function foundersReward() private {
         token.lockTill(FOUNDERS_WALLET, now + 60 * 60 * 24 * 365 * 2); // 2years
-        token.mint(FOUNDERS_WALLET, foundersBalance);
+        token.mint(FOUNDERS_WALLET, foundersBalance.mul(RATE));
         foundersBalance = 0;
     }
 
     function earlyBirdsReward() private {
-        token.mint(EARLY_BIRDS_WALLET, earlyBirdsBalance);
+        token.mint(EARLY_BIRDS_WALLET, earlyBirdsBalance.mul(RATE));
         earlyBirdsBalance = 0;
     }
 }
