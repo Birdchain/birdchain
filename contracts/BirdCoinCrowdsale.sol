@@ -39,7 +39,7 @@ contract BirdCoinCrowdsale is Ownable {
     uint256 bountyBalance;
     uint256 public specialBalance;
     uint256 saleBalance;
-    uint256 private startTime = now;
+    uint256 startTime = now;
     uint256 public endTime = startTime + 4 * 60;
     uint public currentStage = 0;
 
@@ -50,7 +50,7 @@ contract BirdCoinCrowdsale is Ownable {
     Stages[] stagesList;
     mapping (address => uint8) whitelist;
 
-    event TokenPurchase(address indexed purchaser, address indexed beneficiary, uint256 value, uint256 amount);
+    event TokenPurchase(address indexed beneficiary, uint256 value, uint256 amount, uint256 amountWithoutSpecials, uint stage);
     event Finalized();
 
     function BirdCoinCrowdsale() {
@@ -67,8 +67,6 @@ contract BirdCoinCrowdsale is Ownable {
 
         require(startTime >= now);
         require(endTime >= startTime);
-        require(RATE > 0);
-        require(FOUNDERS_WALLET != 0x0);
 
         token = new BirdCoin();
         vault = new RefundVault(FOUNDERS_WALLET);
@@ -103,16 +101,23 @@ contract BirdCoinCrowdsale is Ownable {
         uint256 weiAmount = msg.value;
         require(weiRaised.add(weiAmount) < TOTAL_ETH);
 
-        uint256 tokens = calcTokens(beneficiary, weiAmount);
+        uint256 tokens = calcTokens(weiAmount);
+        uint256 tokensWithoutSpecials = tokens;
 
-        purchasers[beneficiary] = msg.value;
+        if (whitelist[beneficiary] == 2 && specialBalance >= SILVER) {
+            tokens = tokens.add(SILVER);
+            specialBalance = specialBalance.sub(SILVER);
+        }
 
+        if (whitelist[beneficiary] == 3 && specialBalance >= GOLD) {
+            tokens = tokens.add(GOLD);
+            specialBalance = specialBalance.sub(GOLD);
+        }
+
+        tokens = tokens.mul(RATE);
         token.mint(beneficiary, tokens);
-        TokenPurchase(msg.sender, beneficiary, weiAmount, tokens);
-        forwardFunds();
-    }
-
-    function forwardFunds() internal {
+        purchasers[beneficiary] = weiAmount;
+        TokenPurchase(beneficiary, weiAmount, tokens, tokensWithoutSpecials, currentStage);
         vault.deposit.value(msg.value)(msg.sender);
     }
 
@@ -128,37 +133,27 @@ contract BirdCoinCrowdsale is Ownable {
 
     /******************** Token amount calculations  ********************/
 
-    function calcTokens(address addr, uint256 amount) private returns (uint256) {
+    function calcTokens(uint256 amount) private returns (uint256) {
         weiRaised = weiRaised.add(amount);
 
-        uint256 totalInvest = amount.mul(stagesList[currentStage].discount).div(100);
+        uint256 tokens = amount.mul(stagesList[currentStage].discount).div(100);
         if (weiRaised >= stagesList[currentStage].limit) {
             uint256 excess = weiRaised.sub(stagesList[currentStage].limit);
-            totalInvest = amount.sub(excess).mul(stagesList[currentStage].discount);
+            tokens = amount.sub(excess).mul(stagesList[currentStage].discount);
             if (currentStage != 10) {
-                totalInvest = totalInvest.add(excess.mul(stagesList[currentStage.add(1)].discount));
+                tokens = tokens.add(excess.mul(stagesList[currentStage.add(1)].discount));
                 currentStage++;
             }
         }
 
-        icoBalance = icoBalance.sub(totalInvest);
+        icoBalance = icoBalance.sub(tokens);
 
-        if (whitelist[addr] == 2 && specialBalance >= SILVER) {
-            totalInvest = totalInvest.add(SILVER);
-            specialBalance = specialBalance.sub(SILVER);
-        }
-
-        if (whitelist[addr] == 3 && specialBalance >= GOLD) {
-            totalInvest = totalInvest.add(GOLD);
-            specialBalance = specialBalance.sub(GOLD);
-        }
-
-        return totalInvest.mul(RATE);
+        return tokens;
     }
 
     /**************************** Refunds  *****************************/
 
-    function claimRefund() private {
+    function claimRefund() public {
         require(isFinalized);
         require(!goalReached());
 
@@ -246,3 +241,4 @@ contract BirdCoinCrowdsale is Ownable {
         earlyBirdsBalance = 0;
     }
 }
+
