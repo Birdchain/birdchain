@@ -146,7 +146,7 @@ contract BirdCoinCrowdsale is Ownable {
             }
         }
 
-        icoBalance = icoBalance.sub(tokens);
+        icoBalance = icoBalance.sub(amount);
 
         return tokens;
     }
