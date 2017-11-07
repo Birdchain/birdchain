@@ -17,8 +17,8 @@ contract BirdCoinCrowdsale is Ownable {
     address constant BOUNTY_WALLET = 0xEA3E63a29e40DAce4559EE4e566655Fab65FEcB9;
     uint256 constant TOTAL_LEVELS = 3;
     uint256 constant RATE = 42000;
-    uint256 constant MIN_STAKE = 0.5 ether;
-    uint256 constant MAX_STAKE = 500 ether;
+    uint256 constant MIN_STAKE = 0.1 ether;
+    uint256 constant MAX_STAKE = 2000 ether;
     uint256 constant TOTAL_ETH = 200000 ether;
     uint256 constant SOFT_CAP = 10000 ether;
     uint constant SILVER = 1 ether;
@@ -40,7 +40,7 @@ contract BirdCoinCrowdsale is Ownable {
     uint256 public specialBalance;
     uint256 saleBalance;
     uint256 startTime = now;
-    uint256 public endTime = startTime + 4 * 60;
+    uint256 public endTime = startTime + 60 * 60 * 24 * 7;
     uint public currentStage = 0;
 
     struct Stages {
@@ -50,8 +50,7 @@ contract BirdCoinCrowdsale is Ownable {
     Stages[] stagesList;
     mapping (address => uint8) whitelist;
 
-    event TokenPurchase(address indexed beneficiary, uint256 value, uint256 amount, uint256 amountWithoutSpecials, uint stage);
-    event Finalized();
+    event TokenPurchase(address indexed beneficiary, uint256 value, uint256 amount, uint256 bonus, uint stage);
 
     function BirdCoinCrowdsale() {
         stagesList.push(Stages({limit: 9500 ether, discount: 150 }));
@@ -65,8 +64,7 @@ contract BirdCoinCrowdsale is Ownable {
         stagesList.push(Stages({limit: 77500 ether, discount: 110 }));
         stagesList.push(Stages({limit: 86000 ether, discount: 105 }));
 
-        require(startTime >= now);
-        require(endTime >= startTime);
+        require(startTime >= now && endTime >= startTime);
 
         token = new BirdCoin();
         vault = new RefundVault(FOUNDERS_WALLET);
@@ -97,38 +95,38 @@ contract BirdCoinCrowdsale is Ownable {
 
     function buyTokens(address beneficiary) public payable {
         require(validPurchase(beneficiary));
+        require(weiRaised.add(msg.value) <= TOTAL_ETH);
 
-        uint256 weiAmount = msg.value;
-        require(weiRaised.add(weiAmount) < TOTAL_ETH);
+        uint256 tokens = calcTokens(msg.value);
 
-        uint256 tokens = calcTokens(weiAmount);
-        uint256 tokensWithoutSpecials = tokens;
-
-        if (whitelist[beneficiary] == 2 && specialBalance >= SILVER) {
-            tokens = tokens.add(SILVER);
-            specialBalance = specialBalance.sub(SILVER);
+        uint256 bonus = 0;
+        if (whitelist[beneficiary] == 2 && msg.value >= 0.5 ether) {
+            bonus = SILVER;
         }
 
-        if (whitelist[beneficiary] == 3 && specialBalance >= GOLD) {
-            tokens = tokens.add(GOLD);
-            specialBalance = specialBalance.sub(GOLD);
+        if (whitelist[beneficiary] == 3 && msg.value >= GOLD) {
+            bonus = GOLD;
         }
 
-        tokens = tokens.mul(RATE);
+        if (bonus > 0) {
+            specialBalance = specialBalance.sub(bonus);
+            whitelist[beneficiary] = 1;
+        }
+
+        tokens = tokens.add(bonus).mul(RATE);
         token.mint(beneficiary, tokens);
-        purchasers[beneficiary] = weiAmount;
-        TokenPurchase(beneficiary, weiAmount, tokens, tokensWithoutSpecials, currentStage);
-        vault.deposit.value(msg.value)(msg.sender);
+        purchasers[beneficiary] = msg.value;
+        TokenPurchase(beneficiary, msg.value, tokens, bonus, currentStage);
+        vault.deposit.value(msg.value)(beneficiary);
     }
 
     function validPurchase(address beneficiary) internal constant returns (bool) {
         bool validAddress = beneficiary != 0x0;
-        bool isWhitelisted = whitelist[beneficiary] > 0;
+        bool isWhitelisted = msg.value <= 2.5 ether || whitelist[beneficiary] > 0;
         bool isSenderBeneficiary = msg.sender == beneficiary;
-        bool hasNotPaid = (purchasers[beneficiary] == 0);
         bool withinPeriod = now >= startTime && now <= endTime;
         bool withinRangePurchase = msg.value >= MIN_STAKE && msg.value <= MAX_STAKE;
-        return validAddress && withinPeriod && withinRangePurchase && isWhitelisted && isSenderBeneficiary && hasNotPaid;
+        return validAddress && withinPeriod && withinRangePurchase && isWhitelisted && isSenderBeneficiary;
     }
 
     /******************** Token amount calculations  ********************/
@@ -153,7 +151,7 @@ contract BirdCoinCrowdsale is Ownable {
 
     /**************************** Refunds  *****************************/
 
-    function claimRefund() public {
+    function claimRefund() private {
         require(isFinalized);
         require(!goalReached());
 
@@ -162,7 +160,7 @@ contract BirdCoinCrowdsale is Ownable {
 
     function finalize() onlyOwner public {
         require(!isFinalized);
-        require(now > endTime);
+        require(now > endTime || icoBalance < MIN_STAKE);
 
         if (goalReached()) {
             vault.close();
@@ -177,8 +175,6 @@ contract BirdCoinCrowdsale is Ownable {
             vault.enableRefunds();
             token.freezeForever();
         }
-
-        Finalized();
 
         isFinalized = true;
     }
@@ -241,4 +237,3 @@ contract BirdCoinCrowdsale is Ownable {
         earlyBirdsBalance = 0;
     }
 }
-
