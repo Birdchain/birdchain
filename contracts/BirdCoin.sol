@@ -7,21 +7,21 @@ contract BirdCoin is MintableToken {
     string public constant name = "BirdCoin";
     string public constant symbol = "Bird";
     uint8 public constant decimals = 18;
-    uint256 private lockedTill;
+    bool private isFrozen = false;
     mapping (address => uint256) private lockDuration;
     BirdCoinCrowdsale private crowdsale;
 
     function BirdCoin() MintableToken() {
-        crowdsale = BirdCoinCrowdsale(msg.sender); // it is mandatory that this contract is created from BirdCoinCrowdsale contract!
+        crowdsale = BirdCoinCrowdsale(msg.sender);
     }
 
     // Checks whether it can transfer or otherwise throws.
     modifier canTransfer(address _sender, uint _value) {
         require(lockDuration[_sender] < now);
-        require(lockedTill != 0 && crowdsale.endTime() < now);
+        require(!isFrozen && crowdsale.isFinalized());
         _;
     }
-    // calls withdraw on BirdCoinCrowdsale contract
+    // Calls withdraw on BirdCoinCrowdsale contract
     modifier withdraw(address _owner) {
         crowdsale.withdraw(_owner);
         _;
@@ -46,11 +46,11 @@ contract BirdCoin is MintableToken {
         return super.balanceOf(_owner).add(crowdsale.calcAdditionalTokens(_owner));
     }
 
-    function lockTill(address addr, uint256 timeTill) {
+    function lockTill(address addr, uint256 timeTill) onlyOwner {
         lockDuration[addr] = timeTill;
     }
 
-    function freezeForever() {
-        lockedTill = 0;
+    function freezeForever() onlyOwner {
+        isFrozen = true;
     }
 }
