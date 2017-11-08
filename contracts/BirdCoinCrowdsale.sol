@@ -39,8 +39,8 @@ contract BirdCoinCrowdsale is Ownable {
     uint256 bountyBalance;
     uint256 public specialBalance;
     uint256 saleBalance;
-    uint256 startTime = now;
-    uint256 public endTime = startTime + 60 * 60 * 24 * 7;
+    uint256 startTime = 1510992000;
+    uint256 public endTime = startTime.add(60 * 60 * 24 * 36);
     uint public currentStage = 0;
 
     struct Stages {
@@ -48,7 +48,7 @@ contract BirdCoinCrowdsale is Ownable {
         uint discount;
     }
     Stages[] stagesList;
-    mapping (address => uint8) whitelist;
+    mapping (address => uint32) whitelist;
 
     event TokenPurchase(address indexed beneficiary, uint256 value, uint256 amount, uint256 bonus, uint stage);
 
@@ -80,7 +80,7 @@ contract BirdCoinCrowdsale is Ownable {
 
     function () payable {
         if (!isFinalized) {
-            buyTokens(msg.sender);
+            buyTokens();
         } else {
             claimRefund();
         }
@@ -88,45 +88,44 @@ contract BirdCoinCrowdsale is Ownable {
 
     function addToWhitelist(address addr, uint8 level) public onlyOwner {
         require(level > 0 && level <= TOTAL_LEVELS);
-        require(whitelist[addr] <= 0);
+        require(whitelist[addr] == 0);
         whitelist[addr] = level;
-        membersCount++;
+        membersCount = membersCount.add(1);
     }
 
-    function buyTokens(address beneficiary) public payable {
-        require(validPurchase(beneficiary));
-        require(weiRaised.add(msg.value) <= TOTAL_ETH);
+    function buyTokens() public payable {
+        require(validPurchase());
+        require(weiRaised.add(msg.value) <= icoBalance);
 
         uint256 tokens = calcTokens(msg.value);
 
         uint256 bonus = 0;
-        if (whitelist[beneficiary] == 2 && msg.value >= 0.5 ether) {
+        if (whitelist[msg.sender] == 2 && msg.value >= 0.5 ether) {
             bonus = SILVER;
         }
 
-        if (whitelist[beneficiary] == 3 && msg.value >= GOLD) {
+        if (whitelist[msg.sender] == 3 && msg.value >= GOLD) {
             bonus = GOLD;
         }
 
         if (bonus > 0) {
             specialBalance = specialBalance.sub(bonus);
-            whitelist[beneficiary] = 1;
+            whitelist[msg.sender] = 1;
         }
 
         tokens = tokens.add(bonus).mul(RATE);
-        token.mint(beneficiary, tokens);
-        purchasers[beneficiary] = msg.value;
-        TokenPurchase(beneficiary, msg.value, tokens, bonus, currentStage);
-        vault.deposit.value(msg.value)(beneficiary);
+        token.mint(msg.sender, tokens);
+        purchasers[msg.sender] = purchasers[msg.sender].add(msg.value);
+        TokenPurchase(msg.sender, msg.value, tokens, bonus, currentStage);
+        vault.deposit.value(msg.value)(msg.sender);
     }
 
-    function validPurchase(address beneficiary) internal constant returns (bool) {
-        bool validAddress = beneficiary != 0x0;
-        bool isWhitelisted = msg.value <= 2.5 ether || whitelist[beneficiary] > 0;
-        bool isSenderBeneficiary = msg.sender == beneficiary;
-        bool withinPeriod = now >= startTime && now <= endTime;
-        bool withinRangePurchase = msg.value >= MIN_STAKE && msg.value <= MAX_STAKE;
-        return validAddress && withinPeriod && withinRangePurchase && isWhitelisted && isSenderBeneficiary;
+    function validPurchase() internal constant returns (bool) {
+        bool validAddress = (msg.sender != 0x0);
+        bool isWhitelisted = (msg.value <= 2.5 ether || whitelist[msg.sender] > 0);
+        bool withinPeriod = (now >= startTime && now <= endTime);
+        bool withinRangePurchase = (msg.value >= MIN_STAKE && msg.value <= MAX_STAKE);
+        return validAddress && withinPeriod && withinRangePurchase && isWhitelisted;
     }
 
     /******************** Token amount calculations  ********************/
@@ -134,14 +133,16 @@ contract BirdCoinCrowdsale is Ownable {
     function calcTokens(uint256 amount) private returns (uint256) {
         weiRaised = weiRaised.add(amount);
 
-        uint256 tokens = amount.mul(stagesList[currentStage].discount).div(100);
+        uint256 tokens = 0;
         if (weiRaised >= stagesList[currentStage].limit) {
             uint256 excess = weiRaised.sub(stagesList[currentStage].limit);
-            tokens = amount.sub(excess).mul(stagesList[currentStage].discount);
-            if (currentStage != 10) {
-                tokens = tokens.add(excess.mul(stagesList[currentStage.add(1)].discount));
-                currentStage++;
+            tokens = amount.sub(excess).mul(stagesList[currentStage].discount).div(100);
+            if (currentStage != 9) {
+                currentStage = currentStage.add(1);
+                tokens = tokens.add(excess.mul(stagesList[currentStage].discount).div(100));
             }
+        } else {
+            tokens = amount.mul(stagesList[currentStage].discount).div(100);
         }
 
         icoBalance = icoBalance.sub(amount);
@@ -170,7 +171,7 @@ contract BirdCoinCrowdsale is Ownable {
             teamReward();
             foundersReward();
 
-            token.mint(this, icoBalance.add(specialBalance));
+            token.mint(this, icoBalance.add(specialBalance).mul(RATE));
         } else {
             vault.enableRefunds();
             token.freezeForever();
@@ -186,7 +187,7 @@ contract BirdCoinCrowdsale is Ownable {
     /********************* Token distribution ********************/
 
     function calcAdditionalTokens(address _purchaser) constant public returns (uint256) {
-        if (purchasers[_purchaser] > 0 && goalReached()) {
+        if (purchasers[_purchaser] > 0 && isFinalized) {
             uint256 totalBalanceLeft = icoBalance.add(specialBalance);
             uint256 totalSold = saleBalance.sub(totalBalanceLeft);
             uint256 value = purchasers[_purchaser];
@@ -207,33 +208,36 @@ contract BirdCoinCrowdsale is Ownable {
     function teamReward() private {
         uint256 partPerYear = teamBalance.mul(RATE).div(4);
         uint yearInSeconds = 31536000;
-        token.lockTill(TEAM_WALLET_1_YEAR, now + yearInSeconds);
+        teamBalance = 0;
+        token.lockTill(TEAM_WALLET_1_YEAR, startTime + yearInSeconds);
         token.mint(TEAM_WALLET_1_YEAR, partPerYear);
 
-        token.lockTill(TEAM_WALLET_2_YEAR, now + yearInSeconds * 2);
+        token.lockTill(TEAM_WALLET_2_YEAR, startTime + yearInSeconds * 2);
         token.mint(TEAM_WALLET_2_YEAR, partPerYear);
 
-        token.lockTill(TEAM_WALLET_3_YEAR, now + yearInSeconds * 3);
+        token.lockTill(TEAM_WALLET_3_YEAR, startTime + yearInSeconds * 3);
         token.mint(TEAM_WALLET_3_YEAR, partPerYear);
 
-        token.lockTill(TEAM_WALLET_4_YEAR, now + yearInSeconds * 4);
+        token.lockTill(TEAM_WALLET_4_YEAR, startTime + yearInSeconds * 4);
         token.mint(TEAM_WALLET_4_YEAR, partPerYear);
-        teamBalance = 0;
     }
 
     function bountyReward() private {
-        token.mint(BOUNTY_WALLET, bountyBalance.mul(RATE));
+        uint256 tokens = bountyBalance.mul(RATE);
         bountyBalance = 0;
+        token.mint(BOUNTY_WALLET, tokens);
     }
 
     function foundersReward() private {
-        token.lockTill(FOUNDERS_WALLET, now + 31536000 * 2); // 2years
-        token.mint(FOUNDERS_WALLET, foundersBalance.mul(RATE));
+        token.lockTill(FOUNDERS_WALLET, startTime + 31536000 * 2); // 2years
+        uint256 tokens = foundersBalance.mul(RATE);
         foundersBalance = 0;
+        token.mint(FOUNDERS_WALLET, tokens);
     }
 
     function earlyBirdsReward() private {
-        token.mint(EARLY_BIRDS_WALLET, earlyBirdsBalance.mul(RATE));
+        uint256 tokens = earlyBirdsBalance.mul(RATE);
         earlyBirdsBalance = 0;
+        token.mint(EARLY_BIRDS_WALLET, tokens);
     }
 }
