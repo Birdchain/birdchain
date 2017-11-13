@@ -33,6 +33,7 @@ contract BirdCoinCrowdsale is Ownable {
     uint256 public membersCount = 0;
     uint256 public weiRaised;
     uint256 public icoBalance;
+    uint256 initialIcoBalance;
     uint256 teamBalance;
     uint256 foundersBalance;
     uint256 earlyBirdsBalance;
@@ -70,6 +71,7 @@ contract BirdCoinCrowdsale is Ownable {
         vault = new RefundVault(FOUNDERS_WALLET);
 
         icoBalance = TOTAL_ETH.mul(43).div(100);
+        initialIcoBalance = icoBalance;
         teamBalance = TOTAL_ETH.mul(14).div(100);
         foundersBalance = TOTAL_ETH.mul(13).div(100);
         earlyBirdsBalance = TOTAL_ETH.mul(23).div(100);
@@ -95,7 +97,7 @@ contract BirdCoinCrowdsale is Ownable {
 
     function buyTokens() public payable {
         require(validPurchase());
-        require(weiRaised.add(msg.value) <= icoBalance);
+        require(weiRaised.add(msg.value) <= initialIcoBalance);
 
         uint256 tokens = calcTokens(msg.value);
 
