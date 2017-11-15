@@ -72,24 +72,24 @@ Depending on a country and market activity users of Birdchain app will be able t
 
 We see this feature as huge marketing opportunity and a chance to stand out in a global market of messaging apps.
 
-## BTC token functionality
+## BIRD token functionality
 
 In order to further the development of the platform and get to the global market as soon as possible we are going to raise funding by running an ICO campaign.
 
-Birdchain will issue 9,402,750,000  BCT tokens total, of which 43% will be put on sale. 
+Birdchain will issue 9,402,750,000  BIRD tokens total, of which 43% will be put on sale. 
 The base cost of tokens will depend on the popularity of the platform, and their holders.
-Birdchain token is an A2P SMS distribution service and all owners of BCT are either users of the service, or resellers of the token.
+Birdchain token is an A2P SMS distribution service and all owners of BIRD are either users of the service, or resellers of the token.
 
-Within the Birdchain ecosystem, the Birdchain token (BCT) will be used internally to buy or sell transactional and promotional SMS.
+Within the Birdchain ecosystem, the Birdchain token (BIRD) will be used internally to buy or sell transactional and promotional SMS.
 Businesses would be able to purchase BCT in exchanges, and then place bids for SMS campaigns they want to deliver, setting the bid in BCT token. The advertisers will bid for a specific number of SMS they want to send.
 
 While our system is calculating the best price/delivery time option for an advertiser, the token will be frozen. They will remain frozen until our system receives confirmation that peers have completed their tasks. When that happens, paid tokens are transferred to the wallets of app users, minus fair commission fee for Birdchain service.
  
-BCT token is developed on Ethereum’s blockchain and conform to the ERC20 Token Standard.
+BIRD token is developed on Ethereum’s blockchain and conform to the ERC20 Token Standard.
 
 Important notes:
-1. BCT tokens will be sent automatically back to the wallet from which the funds have been sent.
-2. BCT tokens transactions will be limited till ICO end to prevent trading before the ICO ends.
+1. BIRD tokens will be sent automatically back to the wallet from which the funds have been sent.
+2. BIRD tokens transactions will be limited till ICO end to prevent trading before the ICO ends.
 3. Do not send ETH directly from cryptocurrency exchanges (Coinbase, Kraken, Poloniex etc.)!
 4. We'll send back all ETH in case of minimal cap is not collected.
 
