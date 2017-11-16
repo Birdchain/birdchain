@@ -5,7 +5,7 @@ import "./BirdCoinCrowdsale.sol";
 
 contract BirdCoin is MintableToken {
     string public constant name = "BirdCoin";
-    string public constant symbol = "Bird";
+    string public constant symbol = "BIRD";
     uint8 public constant decimals = 18;
     bool private isLocked = true;
     mapping (address => uint256) private lockDuration;
