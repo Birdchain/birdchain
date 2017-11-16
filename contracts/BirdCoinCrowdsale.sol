@@ -19,7 +19,7 @@ contract BirdCoinCrowdsale is Ownable {
     uint256 constant MIN_STAKE = 0.1 ether;
     uint256 constant MAX_STAKE = 2000 ether;
     uint256 constant HARD_CAP = 86000 ether;
-    uint256 constant SOFT_CAP = 10000 ether;
+    uint256 constant SOFT_CAP = 95000 ether;
     uint constant SILVER = 1 ether;
     uint constant GOLD = 5 ether;
 
