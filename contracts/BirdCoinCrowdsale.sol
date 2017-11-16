@@ -1,4 +1,4 @@
-pragma solidity ^0.4.13;
+pragma solidity ^0.4.18;
 
 import "zeppelin-solidity/contracts/ownership/Ownable.sol";
 import "zeppelin-solidity/contracts/crowdsale/RefundVault.sol";
@@ -8,18 +8,17 @@ contract BirdCoinCrowdsale is Ownable {
     using SafeMath for uint256;
 
     address constant FOUNDERS_WALLET = 0xEA3E63a29e40DAce4559EE4e566655Fab65FEcB9; // Wallet address where ethereum will be kept
+    address constant WHITELISTER_WALLET = 0xEA3E63a29e40DAce4559EE4e566655Fab65FEcB9;
     address constant EARLY_BIRDS_WALLET = 0xEA3E63a29e40DAce4559EE4e566655Fab65FEcB9;
-    address constant ETHEREUM_WALLET = 0x89205A3A3b2A69De6Dbf7f01ED13B2108B2c43e7;
     address constant TEAM_WALLET_1_YEAR = 0xEA3E63a29e40DAce4559EE4e566655Fab65FEcB9;
     address constant TEAM_WALLET_2_YEAR = 0xEA3E63a29e40DAce4559EE4e566655Fab65FEcB9;
     address constant TEAM_WALLET_3_YEAR = 0xEA3E63a29e40DAce4559EE4e566655Fab65FEcB9;
     address constant TEAM_WALLET_4_YEAR = 0xEA3E63a29e40DAce4559EE4e566655Fab65FEcB9;
     address constant BOUNTY_WALLET = 0xEA3E63a29e40DAce4559EE4e566655Fab65FEcB9;
-    uint256 constant TOTAL_LEVELS = 3;
     uint256 constant RATE = 42000;
     uint256 constant MIN_STAKE = 0.1 ether;
     uint256 constant MAX_STAKE = 2000 ether;
-    uint256 constant TOTAL_ETH = 200000 ether;
+    uint256 constant HARD_CAP = 86000 ether;
     uint256 constant SOFT_CAP = 10000 ether;
     uint constant SILVER = 1 ether;
     uint constant GOLD = 5 ether;
@@ -33,15 +32,10 @@ contract BirdCoinCrowdsale is Ownable {
     uint256 public membersCount = 0;
     uint256 public weiRaised;
     uint256 public icoBalance;
-    uint256 initialIcoBalance;
-    uint256 teamBalance;
-    uint256 foundersBalance;
-    uint256 earlyBirdsBalance;
-    uint256 bountyBalance;
-    uint256 public specialBalance;
-    uint256 saleBalance;
-    uint256 startTime = 1510992000;
+    uint256 startTime = now;
     uint256 public endTime = startTime.add(60 * 60 * 24 * 36);
+    uint256 public icoBalanceLeft;
+    uint256 public initialIcoBalance;
     uint public currentStage = 0;
 
     struct Stages {
@@ -70,14 +64,8 @@ contract BirdCoinCrowdsale is Ownable {
         token = new BirdCoin();
         vault = new RefundVault(FOUNDERS_WALLET);
 
-        icoBalance = TOTAL_ETH.mul(43).div(100);
+        icoBalance = 4698750000 ether;
         initialIcoBalance = icoBalance;
-        teamBalance = TOTAL_ETH.mul(14).div(100);
-        foundersBalance = TOTAL_ETH.mul(13).div(100);
-        earlyBirdsBalance = TOTAL_ETH.mul(23).div(100);
-        specialBalance = TOTAL_ETH.mul(1).div(100);
-        bountyBalance = TOTAL_ETH.mul(6).div(100);
-        saleBalance = icoBalance.add(specialBalance);
     }
 
     function () payable {
@@ -88,68 +76,65 @@ contract BirdCoinCrowdsale is Ownable {
         }
     }
 
-    function addToWhitelist(address addr, uint8 level) public onlyOwner {
-        require(level > 0 && level <= TOTAL_LEVELS);
-        require(whitelist[addr] == 0);
+    modifier onlyWhitelister() {
+        require(msg.sender == WHITELISTER_WALLET);
+        _;
+    }
+
+    function addToWhitelist(address addr, uint8 level) public onlyWhitelister {
+        require(whitelist[addr] == 0 && (level == 1 || level == 5 || level == 2 || level == 6 || level == 10));
         whitelist[addr] = level;
         membersCount = membersCount.add(1);
     }
 
     function buyTokens() public payable {
         require(validPurchase());
-        require(weiRaised.add(msg.value) <= initialIcoBalance);
 
-        uint256 tokens = calcTokens(msg.value);
+        weiRaised = weiRaised.add(msg.value);
+
+        uint256 tokens = 0;
+        uint256 excess = 0;
+        if (weiRaised >= stagesList[currentStage].limit) {
+            excess = weiRaised.sub(stagesList[currentStage].limit);
+            tokens = msg.value.sub(excess).mul(stagesList[currentStage].discount).div(100);
+            currentStage = currentStage.add(1);
+            if (currentStage < 10) {
+                tokens = tokens.add(excess.mul(stagesList[currentStage].discount).div(100));
+                excess = 0;
+            }
+        } else {
+            tokens = msg.value.mul(stagesList[currentStage].discount).div(100);
+        }
 
         uint256 bonus = 0;
-        if (whitelist[msg.sender] == 2 && msg.value >= 0.5 ether) {
+        if (whitelist[msg.sender] & 4 == 4 && msg.value >= 0.5 ether) {
             bonus = SILVER;
         }
 
-        if (whitelist[msg.sender] == 3 && msg.value >= GOLD) {
+        if (whitelist[msg.sender] & 8 == 8 && msg.value >= GOLD) {
             bonus = GOLD;
         }
 
-        if (bonus > 0) {
-            specialBalance = specialBalance.sub(bonus);
-            whitelist[msg.sender] = 1;
-        }
-
         tokens = tokens.add(bonus).mul(RATE);
+        icoBalance = icoBalance.sub(tokens);
         token.mint(msg.sender, tokens);
-        purchasers[msg.sender] = purchasers[msg.sender].add(msg.value);
-        TokenPurchase(msg.sender, msg.value, tokens, bonus, currentStage);
-        vault.deposit.value(msg.value)(msg.sender);
+        uint256 value = msg.value.sub(excess);
+        purchasers[msg.sender] = tokens;
+        TokenPurchase(msg.sender, value, tokens, bonus, currentStage);
+        vault.deposit.value(value)(msg.sender);
+        if (excess > 0) {
+            weiRaised = weiRaised.sub(excess);
+            msg.sender.transfer(excess);
+        }
     }
 
     function validPurchase() internal constant returns (bool) {
         bool validAddress = (msg.sender != 0x0);
-        bool isWhitelisted = (msg.value <= 2.5 ether || whitelist[msg.sender] > 0);
+        bool isWhitelisted = (whitelist[msg.sender] & 1 == 1 && msg.value <= 2.5 ether) || whitelist[msg.sender] & 2 == 2;
         bool withinPeriod = (now >= startTime && now <= endTime);
         bool withinRangePurchase = (msg.value >= MIN_STAKE && msg.value <= MAX_STAKE);
-        return validAddress && withinPeriod && withinRangePurchase && isWhitelisted;
-    }
-
-    /******************** Token amount calculations  ********************/
-
-    function calcTokens(uint256 amount) private returns (uint256) {
-        weiRaised = weiRaised.add(amount);
-
-        uint256 tokens = 0;
-        if (weiRaised >= stagesList[currentStage].limit) {
-            uint256 excess = weiRaised.sub(stagesList[currentStage].limit);
-            tokens = amount.sub(excess).mul(stagesList[currentStage].discount).div(100);
-            if (currentStage != 9) {
-                currentStage = currentStage.add(1);
-                tokens = tokens.add(excess.mul(stagesList[currentStage].discount).div(100));
-            }
-        } else {
-            tokens = amount.mul(stagesList[currentStage].discount).div(100);
-        }
-
-        icoBalance = icoBalance.sub(amount);
-
-        return tokens;
+        bool isStageValid = currentStage < 10;
+        return validAddress && withinPeriod && withinRangePurchase && isWhitelisted && isStageValid;
     }
 
     /**************************** Refunds  *****************************/
@@ -163,20 +148,22 @@ contract BirdCoinCrowdsale is Ownable {
 
     function finalize() onlyOwner public {
         require(!isFinalized);
-        require(now > endTime || icoBalance < MIN_STAKE);
+        require(now > endTime || HARD_CAP - weiRaised < MIN_STAKE);
 
         if (goalReached()) {
             vault.close();
+            token.unlockTokens();
 
             bountyReward();
             earlyBirdsReward();
             teamReward();
             foundersReward();
 
-            token.mint(this, icoBalance.add(specialBalance).mul(RATE));
+            token.mint(this, icoBalance);
+            token.finishMinting();
+            icoBalanceLeft = icoBalance;
         } else {
             vault.enableRefunds();
-            token.freezeForever();
         }
 
         isFinalized = true;
@@ -189,11 +176,10 @@ contract BirdCoinCrowdsale is Ownable {
     /********************* Token distribution ********************/
 
     function calcAdditionalTokens(address _purchaser) constant public returns (uint256) {
-        if (purchasers[_purchaser] > 0 && isFinalized) {
-            uint256 totalBalanceLeft = icoBalance.add(specialBalance);
-            uint256 totalSold = saleBalance.sub(totalBalanceLeft);
+        if (purchasers[_purchaser] > 0 && isFinalized && goalReached()) {
             uint256 value = purchasers[_purchaser];
-            return totalBalanceLeft.mul(value).div(totalSold).mul(RATE);
+            uint256 result = icoBalanceLeft.mul(value).div(initialIcoBalance.sub(icoBalanceLeft));
+            return result;
         }
 
         return 0;
@@ -208,38 +194,32 @@ contract BirdCoinCrowdsale is Ownable {
     }
 
     function teamReward() private {
-        uint256 partPerYear = teamBalance.mul(RATE).div(4);
+        uint256 partPerYear = 294000000 ether;
         uint yearInSeconds = 31536000;
-        teamBalance = 0;
-        token.lockTill(TEAM_WALLET_1_YEAR, startTime + yearInSeconds);
+
+        token.lockTill(TEAM_WALLET_1_YEAR, startTime.add(yearInSeconds));
         token.mint(TEAM_WALLET_1_YEAR, partPerYear);
 
-        token.lockTill(TEAM_WALLET_2_YEAR, startTime + yearInSeconds * 2);
+        token.lockTill(TEAM_WALLET_2_YEAR, startTime.add(yearInSeconds.mul(2)));
         token.mint(TEAM_WALLET_2_YEAR, partPerYear);
 
-        token.lockTill(TEAM_WALLET_3_YEAR, startTime + yearInSeconds * 3);
+        token.lockTill(TEAM_WALLET_3_YEAR, startTime.add(yearInSeconds.mul(3)));
         token.mint(TEAM_WALLET_3_YEAR, partPerYear);
 
-        token.lockTill(TEAM_WALLET_4_YEAR, startTime + yearInSeconds * 4);
+        token.lockTill(TEAM_WALLET_4_YEAR, startTime.add(yearInSeconds.mul(4)));
         token.mint(TEAM_WALLET_4_YEAR, partPerYear);
     }
 
     function bountyReward() private {
-        uint256 tokens = bountyBalance.mul(RATE);
-        bountyBalance = 0;
-        token.mint(BOUNTY_WALLET, tokens);
+        token.mint(BOUNTY_WALLET, 504000000 ether);
     }
 
     function foundersReward() private {
-        token.lockTill(FOUNDERS_WALLET, startTime + 31536000 * 2); // 2years
-        uint256 tokens = foundersBalance.mul(RATE);
-        foundersBalance = 0;
-        token.mint(FOUNDERS_WALLET, tokens);
+        token.lockTill(FOUNDERS_WALLET, startTime.add(63072000)); // 2years
+        token.mint(FOUNDERS_WALLET, 1092000000 ether);
     }
 
     function earlyBirdsReward() private {
-        uint256 tokens = earlyBirdsBalance.mul(RATE);
-        earlyBirdsBalance = 0;
-        token.mint(EARLY_BIRDS_WALLET, tokens);
+        token.mint(EARLY_BIRDS_WALLET, 1932000000 ether);
     }
 }
