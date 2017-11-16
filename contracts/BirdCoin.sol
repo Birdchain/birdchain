@@ -1,4 +1,4 @@
-pragma solidity ^0.4.13;
+pragma solidity ^0.4.18;
 
 import "zeppelin-solidity/contracts/token/MintableToken.sol";
 import "./BirdCoinCrowdsale.sol";
@@ -7,7 +7,7 @@ contract BirdCoin is MintableToken {
     string public constant name = "BirdCoin";
     string public constant symbol = "Bird";
     uint8 public constant decimals = 18;
-    bool private isFrozen = false;
+    bool private isLocked = true;
     mapping (address => uint256) private lockDuration;
     BirdCoinCrowdsale private crowdsale;
 
@@ -18,7 +18,7 @@ contract BirdCoin is MintableToken {
     // Checks whether it can transfer or otherwise throws.
     modifier canTransfer(address _sender, uint _value) {
         require(lockDuration[_sender] < now);
-        require(!isFrozen && crowdsale.isFinalized());
+        require(!isLocked);
         _;
     }
     // Calls withdraw on BirdCoinCrowdsale contract
@@ -50,7 +50,7 @@ contract BirdCoin is MintableToken {
         lockDuration[addr] = timeTill;
     }
 
-    function freezeForever() onlyOwner {
-        isFrozen = true;
+    function unlockTokens() onlyOwner {
+        isLocked = false;
     }
 }
