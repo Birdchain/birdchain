@@ -32,8 +32,8 @@ contract BirdCoinCrowdsale is Ownable {
     uint256 public membersCount = 0;
     uint256 public weiRaised;
     uint256 public icoBalance;
-    uint256 startTime = now;
-    uint256 public endTime = startTime.add(60 * 60 * 24 * 36);
+    uint256 startTime = 1511017200;
+    uint256 public endTime = 1514732400;
     uint256 public icoBalanceLeft;
     uint256 public initialIcoBalance;
     uint public currentStage = 0;
